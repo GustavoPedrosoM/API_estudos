@@ -4,6 +4,9 @@ from models import Tarefa
 app = FastAPI()
 
 tarefas = []
+@app.get("/")
+def read_root():
+    return {"message": "API para estudos cloud rodando com sucesso!"}
 
 @app.get("/tarefas")
 def listar_tarefas():
