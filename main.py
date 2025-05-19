@@ -7,7 +7,7 @@ import os
 app = FastAPI()
 
 # Substitua pelo endpoint do seu Redis
-redis_host = "master.estudos-redis.pd7420.use1.cache.amazonaws.com:6379"
+redis_host = "master.estudos-redis.pd7420.use1.cache.amazonaws.com"
 redis_port = 6379  # Porta padrão
 r = redis.StrictRedis(host=redis_host, port=redis_port, decode_responses=True)
 
