@@ -22,7 +22,7 @@ def listar_tarefas():
 
 @app.post("/tarefas")
 def criar_tarefa(tarefa: Tarefa):
-    r.rpush("tarefas", json.dumps(tarefa.dict()))
+    r.rpush("tarefas", json.dumps(tarefa.model_dump()))
     return {"mensagem": "Tarefa criada com sucesso"}
 
 @app.delete("/tarefas/{id}")
