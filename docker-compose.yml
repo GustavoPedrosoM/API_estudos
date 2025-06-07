@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  fastapi-todolist:
+    build: .
+    container_name: fastapi-todolist
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql-dev
+      - redis-dev
+    environment:
+      - DATABASE_HOST=mysql-dev
+      - REDIS_HOST=redis-dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  mysql-dev:
+    image: mysql:8.0
+    container_name: mysql-dev
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: todolist_db
+      MYSQL_USER: gustavo
+      MYSQL_PASSWORD: gustavo123
+    ports:
+      - "3306:3306"
+
+  redis-dev:
+    image: redis:7.2
+    container_name: redis-dev
+    ports:
+      - "6379:6379"
+    restart: always
