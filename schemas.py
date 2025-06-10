@@ -1,10 +1,10 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class TarefaCreate(BaseModel):
-    id: int
     titulo: str
     descricao: str
     concluida: bool = False
 
 class TarefaOut(TarefaCreate):
-    pass
+    id: int

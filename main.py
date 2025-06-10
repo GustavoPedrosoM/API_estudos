@@ -6,14 +6,33 @@ import schemas
 import redis
 import json
 import os
+import time
 
+# Cria as tabelas no banco
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# Configura Redis com variáveis de ambiente
 redis_host = os.getenv("REDIS_HOST", "localhost")
-r = redis.Redis(host=redis_host, port=6379, db=0, decode_responses=True)
+redis_port = int(os.getenv("REDIS_PORT", 6379))
 
+# Tentativa de conexão com Redis (retry)
+def conectar_redis():
+    for tentativa in range(10):
+        try:
+            r = redis.Redis(host=redis_host, port=redis_port, db=0, decode_responses=True)
+            r.ping()
+            print("✅ Redis conectado com sucesso.")
+            return r
+        except redis.exceptions.ConnectionError:
+            print(f"⏳ Redis não disponível. Tentativa {tentativa + 1}/10...")
+            time.sleep(2)
+    raise Exception("❌ Não foi possível conectar ao Redis após várias tentativas.")
+
+r = conectar_redis()
+
+# Dependência de sessão do banco
 def get_db():
     db = SessionLocal()
     try:
@@ -34,17 +53,17 @@ def listar_tarefas(db: Session = Depends(get_db)):
     tarefas = db.query(models.Tarefa).all()
     tarefas_dict = [t.__dict__ for t in tarefas]
     for t in tarefas_dict:
-        t.pop('_sa_instance_state', None)  # remove metadado do SQLAlchemy
-    r.set("tarefas", json.dumps(tarefas_dict), ex=30)  # cache por 30 segundos
+        t.pop('_sa_instance_state', None)
+    r.set("tarefas", json.dumps(tarefas_dict), ex=30)
     return tarefas_dict
 
-@app.post("/tarefas", response_model=schemas.TarefaOut)
+@app.post("/tarefas", response_model=schemas.TarefaOut, status_code=201)
 def criar_tarefa(tarefa: schemas.TarefaCreate, db: Session = Depends(get_db)):
-    db_tarefa = models.Tarefa(**tarefa.dict())
+    db_tarefa = models.Tarefa(**tarefa.model_dump())
     db.add(db_tarefa)
     db.commit()
     db.refresh(db_tarefa)
-    r.delete("tarefas")  # invalida cache
+    r.delete("tarefas")
     return db_tarefa
 
 @app.delete("/tarefas/{id}")
@@ -54,5 +73,5 @@ def deletar_tarefa(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     db.delete(tarefa)
     db.commit()
-    r.delete("tarefas")  # invalida cache
+    r.delete("tarefas")
     return {"mensagem": "Tarefa removida"}
