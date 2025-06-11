@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import Optional
 
 class TarefaCreate(BaseModel):
     titulo: str
@@ -8,3 +7,6 @@ class TarefaCreate(BaseModel):
 
 class TarefaOut(TarefaCreate):
     id: int
+
+    class Config:
+        orm_mode = True

@@ -1,38 +1,34 @@
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
-from database import SessionLocal, engine
-import models
-import schemas
+from app.database import SessionLocal, engine
+import app.models as models
+import app.schemas as schemas
 import redis
 import json
 import os
 import time
 
-# Cria as tabelas no banco
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# Configura Redis com variáveis de ambiente
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
 
-# Tentativa de conexão com Redis (retry)
 def conectar_redis():
     for tentativa in range(10):
         try:
             r = redis.Redis(host=redis_host, port=redis_port, db=0, decode_responses=True)
             r.ping()
-            print("✅ Redis conectado com sucesso.")
+            print("Redis conectado com sucesso.")
             return r
         except redis.exceptions.ConnectionError:
-            print(f"⏳ Redis não disponível. Tentativa {tentativa + 1}/10...")
+            print(f"Redis não disponível. Tentativa {tentativa + 1}/10...")
             time.sleep(2)
-    raise Exception("❌ Não foi possível conectar ao Redis após várias tentativas.")
+    raise Exception("Não foi possível conectar ao Redis após várias tentativas.")
 
 r = conectar_redis()
 
-# Dependência de sessão do banco
 def get_db():
     db = SessionLocal()
     try:
@@ -75,3 +71,18 @@ def deletar_tarefa(id: int, db: Session = Depends(get_db)):
     db.commit()
     r.delete("tarefas")
     return {"mensagem": "Tarefa removida"}
+
+@app.put("/tarefas/{id}", response_model=schemas.TarefaOut)
+def atualizar_tarefa(id: int, tarefa_atualizada: schemas.TarefaCreate, db: Session = Depends(get_db)):
+    tarefa = db.query(models.Tarefa).filter(models.Tarefa.id == id).first()
+    if not tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+
+    tarefa.titulo = tarefa_atualizada.titulo
+    tarefa.descricao = tarefa_atualizada.descricao
+    tarefa.concluida = tarefa_atualizada.concluida
+
+    db.commit()
+    db.refresh(tarefa)
+    r.delete("tarefas")
+    return tarefa
