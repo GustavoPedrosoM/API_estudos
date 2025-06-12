@@ -14,7 +14,7 @@ services:
       - DATABASE_HOST=mysql-dev
       - REDIS_HOST=redis-dev
       - REDIS_PORT=6379
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   mysql-dev:
     image: mysql:8.0
